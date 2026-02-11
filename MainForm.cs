@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Text.Json;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -339,7 +340,7 @@ public sealed class MainForm : Form
                             rightContainer.Column(rightColumn =>
                             {
                                 rightColumn.Spacing(24);
-                                AddResumeSection(rightColumn.Item(), "Technical Skills", technicalSkills);
+                                AddTechnicalSkillsSection(rightColumn.Item(), technicalSkills);
                             });
                         });
                     });
@@ -372,6 +373,90 @@ public sealed class MainForm : Form
                 .FontColor(Colors.Grey.Darken2);
             AddSectionContent(section.Item(), content);
         });
+    }
+
+    private static void AddTechnicalSkillsSection(IContainer container, string content)
+    {
+        container.Column(section =>
+        {
+            section.Spacing(6);
+            section.Item().Text("Technical Skills")
+                .FontSize(13)
+                .Bold()
+                .FontColor(Colors.Grey.Darken2);
+
+            var categories = ParseSkillCategories(content);
+            if (categories.Count == 0)
+            {
+                AddSectionContent(section.Item(), content);
+                return;
+            }
+
+            section.Item().Column(skillsColumn =>
+            {
+                skillsColumn.Spacing(8);
+
+                foreach (var category in categories)
+                {
+                    skillsColumn.Item().Column(categoryColumn =>
+                    {
+                        categoryColumn.Spacing(2);
+                        categoryColumn.Item().Text(category.Name).Bold().LineHeight(1.2f);
+
+                        foreach (var skill in category.Skills)
+                        {
+                            categoryColumn.Item().Row(skillRow =>
+                            {
+                                skillRow.Spacing(4);
+                                skillRow.ConstantItem(8).Text("•").FontColor(Colors.Grey.Darken2);
+                                skillRow.RelativeItem().Text(skill).LineHeight(1.15f);
+                            });
+                        }
+                    });
+                }
+            });
+        });
+    }
+
+    private static List<SkillCategory> ParseSkillCategories(string content)
+    {
+        var categories = new[]
+        {
+            "Networking",
+            "Systems & Administration",
+            "Support & Tools"
+        };
+
+        var normalizedContent = content.Replace("\r\n", "\n");
+        var results = new List<SkillCategory>();
+
+        foreach (var category in categories)
+        {
+            var nextCategoryPattern = string.Join('|', categories
+                .Where(name => !string.Equals(name, category, StringComparison.OrdinalIgnoreCase))
+                .Select(Regex.Escape));
+
+            var pattern = $@"(?ims){Regex.Escape(category)}\s*:\s*(.+?)(?=\n\s*(?:{nextCategoryPattern})\s*:|$)";
+            var match = Regex.Match(normalizedContent, pattern);
+
+            if (!match.Success)
+            {
+                continue;
+            }
+
+            var skills = match.Groups[1].Value
+                .Split(new[] { ',', '\n', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(skill => skill.Trim())
+                .Where(skill => !string.IsNullOrWhiteSpace(skill))
+                .ToList();
+
+            if (skills.Count > 0)
+            {
+                results.Add(new SkillCategory(category, skills));
+            }
+        }
+
+        return results;
     }
 
     private static void AddSectionContent(IContainer container, string content)
@@ -435,6 +520,8 @@ public sealed class MainForm : Form
         bulletText = line[2..].Trim();
         return !string.IsNullOrWhiteSpace(bulletText);
     }
+
+    private sealed record SkillCategory(string Name, List<string> Skills);
 
     private void LoadResume()
     {
