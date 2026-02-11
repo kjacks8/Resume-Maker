@@ -317,24 +317,30 @@ public sealed class MainForm : Form
                         .AlignCenter();
 
                     column.Item().PaddingTop(12).LineHorizontal(1.5f).LineColor(Colors.Grey.Lighten1);
-                    column.Item().Height(22);
+                    column.Item().PaddingTop(22);
 
                     column.Item().Row(row =>
                     {
                         row.Spacing(20);
 
-                        row.RelativeItem(70).Column(leftColumn =>
+                        row.RelativeItem(70).Element(leftContainer =>
                         {
-                            leftColumn.Spacing(24);
-                            AddResumeSection(leftColumn.Item(), "Summary", GetDisplayValue(summary));
-                            AddResumeSection(leftColumn.Item(), "Experience", experience);
-                            AddResumeSection(leftColumn.Item(), "Key Achievement", keyAchievement);
+                            leftContainer.Column(leftColumn =>
+                            {
+                                leftColumn.Spacing(24);
+                                AddResumeSection(leftColumn.Item(), "Summary", GetDisplayValue(summary));
+                                AddResumeSection(leftColumn.Item(), "Experience", experience);
+                                AddResumeSection(leftColumn.Item(), "Key Achievement", keyAchievement);
+                            });
                         });
 
-                        row.RelativeItem(30).Column(rightColumn =>
+                        row.RelativeItem(30).Element(rightContainer =>
                         {
-                            rightColumn.Spacing(24);
-                            AddResumeSection(rightColumn.Item(), "Technical Skills", technicalSkills);
+                            rightContainer.Column(rightColumn =>
+                            {
+                                rightColumn.Spacing(24);
+                                AddResumeSection(rightColumn.Item(), "Technical Skills", technicalSkills);
+                            });
                         });
                     });
                 });
@@ -386,7 +392,7 @@ public sealed class MainForm : Form
                 {
                     if (string.IsNullOrWhiteSpace(line))
                     {
-                        contentColumn.Item().Height(2);
+                        contentColumn.Item().PaddingTop(2);
                         continue;
                     }
 
