@@ -301,7 +301,7 @@ public sealed class MainForm : Form
                     column.Spacing(0);
 
                     column.Item().Text(string.IsNullOrWhiteSpace(fullName) ? "Unnamed Candidate" : fullName)
-                        .FontSize(28)
+                        .FontSize(30)
                         .Bold()
                         .AlignCenter();
 
@@ -313,27 +313,27 @@ public sealed class MainForm : Form
 
                     column.Item().PaddingTop(4).Text(contactDetails)
                         .FontSize(10)
-                        .FontColor(Colors.Grey.Medium)
+                        .FontColor(Colors.Grey.Darken2)
                         .AlignCenter();
 
-                    column.Item().PaddingTop(12).LineHorizontal(1).LineColor(Colors.Grey.Lighten1);
+                    column.Item().PaddingTop(12).LineHorizontal(1.5f).LineColor(Colors.Grey.Lighten1);
                     column.Item().Height(22);
 
                     column.Item().Row(row =>
                     {
                         row.Spacing(20);
 
-                        row.RelativeItem(65).Column(leftColumn =>
+                        row.RelativeItem(70).Column(leftColumn =>
                         {
-                            leftColumn.Spacing(18);
+                            leftColumn.Spacing(24);
                             AddResumeSection(leftColumn.Item(), "Summary", GetDisplayValue(summary));
                             AddResumeSection(leftColumn.Item(), "Experience", experience);
                             AddResumeSection(leftColumn.Item(), "Key Achievement", keyAchievement);
                         });
 
-                        row.RelativeItem(35).Column(rightColumn =>
+                        row.RelativeItem(30).Column(rightColumn =>
                         {
-                            rightColumn.Spacing(18);
+                            rightColumn.Spacing(24);
                             AddResumeSection(rightColumn.Item(), "Technical Skills", technicalSkills);
                         });
                     });
@@ -359,13 +359,75 @@ public sealed class MainForm : Form
     {
         container.Column(section =>
         {
-            section.Spacing(8);
+            section.Spacing(6);
             section.Item().Text(heading)
                 .FontSize(13)
                 .Bold()
-                .FontColor(Colors.Grey.Darken1);
-            section.Item().Text(content);
+                .FontColor(Colors.Grey.Darken2);
+            AddSectionContent(section.Item(), content);
         });
+    }
+
+    private static void AddSectionContent(IContainer container, string content)
+    {
+        var lines = content
+            .Replace("\r\n", "\n")
+            .Split('\n', StringSplitOptions.None)
+            .Select(line => line.Trim())
+            .ToList();
+
+        if (lines.Count > 1)
+        {
+            container.Column(contentColumn =>
+            {
+                contentColumn.Spacing(2);
+
+                foreach (var line in lines)
+                {
+                    if (string.IsNullOrWhiteSpace(line))
+                    {
+                        contentColumn.Item().Height(2);
+                        continue;
+                    }
+
+                    if (IsBulletLine(line, out var bulletText))
+                    {
+                        contentColumn.Item().Row(bulletRow =>
+                        {
+                            bulletRow.Spacing(4);
+                            bulletRow.ConstantItem(8).Text("•").FontColor(Colors.Grey.Darken2);
+                            bulletRow.RelativeItem().Text(bulletText).LineHeight(1.15f);
+                        });
+                        return;
+                    }
+
+                    contentColumn.Item().Text(line).LineHeight(1.2f);
+                }
+            });
+
+            return;
+        }
+
+        container.Text(content).LineHeight(1.2f);
+    }
+
+    private static bool IsBulletLine(string line, out string bulletText)
+    {
+        bulletText = string.Empty;
+
+        if (line.Length < 2)
+        {
+            return false;
+        }
+
+        var bulletCharacters = new[] { '-', '*', '•' };
+        if (!bulletCharacters.Contains(line[0]) || !char.IsWhiteSpace(line[1]))
+        {
+            return false;
+        }
+
+        bulletText = line[2..].Trim();
+        return !string.IsNullOrWhiteSpace(bulletText);
     }
 
     private void LoadResume()
