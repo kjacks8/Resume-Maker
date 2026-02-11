@@ -1,5 +1,7 @@
 using System.Text;
 using System.Text.Json;
+using QuestPDF.Fluent;
+using QuestPDF.Infrastructure;
 
 namespace ResumeMaker;
 
@@ -200,8 +202,16 @@ public sealed class MainForm : Form
         };
         loadButton.Click += (_, _) => LoadResume();
 
+        var exportPdfButton = new Button
+        {
+            Text = "Export as PDF",
+            AutoSize = true
+        };
+        exportPdfButton.Click += (_, _) => ExportAsPdf();
+
         panel.Controls.Add(saveButton);
         panel.Controls.Add(loadButton);
+        panel.Controls.Add(exportPdfButton);
         return panel;
     }
 
@@ -238,6 +248,77 @@ public sealed class MainForm : Form
         {
             MessageBox.Show(this, $"Unable to save file: {ex.Message}", "Save Resume", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+    }
+
+    private void ExportAsPdf()
+    {
+        using var dialog = new SaveFileDialog
+        {
+            Filter = "PDF files (*.pdf)|*.pdf|All files (*.*)|*.*",
+            DefaultExt = "pdf",
+            AddExtension = true,
+            FileName = "resume.pdf"
+        };
+
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+        {
+            return;
+        }
+
+        try
+        {
+            GenerateResumePdf(dialog.FileName);
+            MessageBox.Show(this, "Resume PDF exported successfully.", "Export as PDF", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, $"Unable to export PDF: {ex.Message}", "Export as PDF", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void GenerateResumePdf(string filePath)
+    {
+        resumeData.TryGetValue("Full Name", out var fullName);
+        resumeData.TryGetValue("Email", out var email);
+        resumeData.TryGetValue("Phone", out var phone);
+        resumeData.TryGetValue("Summary", out var summary);
+
+        Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(40);
+                page.DefaultTextStyle(x => x.FontSize(11));
+
+                page.Content().Column(column =>
+                {
+                    column.Spacing(12);
+
+                    column.Item().Text(string.IsNullOrWhiteSpace(fullName) ? "Unnamed Candidate" : fullName)
+                        .FontSize(24)
+                        .Bold();
+
+                    column.Item().Text($"Email: {email}");
+                    column.Item().Text($"Phone: {phone}");
+
+                    column.Item().PaddingTop(8).Text("Summary").FontSize(16).Bold();
+                    column.Item().Text(string.IsNullOrWhiteSpace(summary) ? "N/A" : summary);
+
+                    column.Item().PaddingTop(8).Text("Question Answers").FontSize(16).Bold();
+
+                    foreach (var question in questionFields)
+                    {
+                        var answerText = string.IsNullOrWhiteSpace(question.AnswerBox.Text)
+                            ? "N/A"
+                            : question.AnswerBox.Text;
+
+                        column.Item().PaddingTop(4).Text(question.Question).SemiBold();
+                        column.Item().Text(answerText);
+                    }
+                });
+            });
+        }).GeneratePdf(filePath);
     }
 
     private void LoadResume()
