@@ -298,10 +298,10 @@ public sealed class MainForm : Form
 
                 page.Content().Column(column =>
                 {
-                    column.Spacing(16);
+                    column.Spacing(0);
 
                     column.Item().Text(string.IsNullOrWhiteSpace(fullName) ? "Unnamed Candidate" : fullName)
-                        .FontSize(24)
+                        .FontSize(28)
                         .Bold()
                         .AlignCenter();
 
@@ -311,14 +311,32 @@ public sealed class MainForm : Form
                         $"Phone: {GetDisplayValue(phone)}"
                     });
 
-                    column.Item().Text(contactDetails).AlignCenter();
+                    column.Item().PaddingTop(4).Text(contactDetails)
+                        .FontSize(10)
+                        .FontColor(Colors.Grey.Medium)
+                        .AlignCenter();
 
-                    column.Item().LineHorizontal(1).LineColor(Colors.Grey.Lighten1);
+                    column.Item().PaddingTop(12).LineHorizontal(1).LineColor(Colors.Grey.Lighten1);
+                    column.Item().Height(22);
 
-                    AddResumeSection(column, "Summary", GetDisplayValue(summary));
-                    AddResumeSection(column, "Experience", experience);
-                    AddResumeSection(column, "Technical Skills", technicalSkills);
-                    AddResumeSection(column, "Key Achievement", keyAchievement);
+                    column.Item().Row(row =>
+                    {
+                        row.Spacing(20);
+
+                        row.RelativeItem(65).Column(leftColumn =>
+                        {
+                            leftColumn.Spacing(18);
+                            AddResumeSection(leftColumn.Item(), "Summary", GetDisplayValue(summary));
+                            AddResumeSection(leftColumn.Item(), "Experience", experience);
+                            AddResumeSection(leftColumn.Item(), "Key Achievement", keyAchievement);
+                        });
+
+                        row.RelativeItem(35).Column(rightColumn =>
+                        {
+                            rightColumn.Spacing(18);
+                            AddResumeSection(rightColumn.Item(), "Technical Skills", technicalSkills);
+                        });
+                    });
                 });
             });
         }).GeneratePdf(filePath);
@@ -337,12 +355,15 @@ public sealed class MainForm : Form
         return string.IsNullOrWhiteSpace(value) ? "N/A" : value.Trim();
     }
 
-    private static void AddResumeSection(ColumnDescriptor column, string heading, string content)
+    private static void AddResumeSection(IContainer container, string heading, string content)
     {
-        column.Item().Column(section =>
+        container.Column(section =>
         {
-            section.Spacing(6);
-            section.Item().Text(heading).FontSize(14).Bold();
+            section.Spacing(8);
+            section.Item().Text(heading)
+                .FontSize(13)
+                .Bold()
+                .FontColor(Colors.Grey.Darken1);
             section.Item().Text(content);
         });
     }
