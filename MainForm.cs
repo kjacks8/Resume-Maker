@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using QuestPDF.Fluent;
+using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 
 namespace ResumeMaker;
@@ -283,42 +284,67 @@ public sealed class MainForm : Form
         resumeData.TryGetValue("Phone", out var phone);
         resumeData.TryGetValue("Summary", out var summary);
 
+        var experience = GetAnswerForQuestion("What is your most recent role?");
+        var technicalSkills = GetAnswerForQuestion("List your top technical skills.");
+        var keyAchievement = GetAnswerForQuestion("Describe a key achievement.");
+
         Document.Create(container =>
         {
             container.Page(page =>
             {
                 page.Size(PageSizes.A4);
-                page.Margin(40);
+                page.Margin(48);
                 page.DefaultTextStyle(x => x.FontSize(11));
 
                 page.Content().Column(column =>
                 {
-                    column.Spacing(12);
+                    column.Spacing(16);
 
                     column.Item().Text(string.IsNullOrWhiteSpace(fullName) ? "Unnamed Candidate" : fullName)
                         .FontSize(24)
-                        .Bold();
+                        .Bold()
+                        .AlignCenter();
 
-                    column.Item().Text($"Email: {email}");
-                    column.Item().Text($"Phone: {phone}");
-
-                    column.Item().PaddingTop(8).Text("Summary").FontSize(16).Bold();
-                    column.Item().Text(string.IsNullOrWhiteSpace(summary) ? "N/A" : summary);
-
-                    column.Item().PaddingTop(8).Text("Question Answers").FontSize(16).Bold();
-
-                    foreach (var question in questionFields)
+                    var contactDetails = string.Join("  |  ", new[]
                     {
-                        var answerText = string.IsNullOrWhiteSpace(question.AnswerBox.Text)
-                            ? "N/A"
-                            : question.AnswerBox.Text;
+                        $"Email: {GetDisplayValue(email)}",
+                        $"Phone: {GetDisplayValue(phone)}"
+                    });
 
-                        column.Item().PaddingTop(4).Text(question.Question).SemiBold();
-                        column.Item().Text(answerText);
-                    }
+                    column.Item().Text(contactDetails).AlignCenter();
+
+                    column.Item().LineHorizontal(1).LineColor(Colors.Grey.Lighten1);
+
+                    AddResumeSection(column, "Summary", GetDisplayValue(summary));
+                    AddResumeSection(column, "Experience", experience);
+                    AddResumeSection(column, "Technical Skills", technicalSkills);
+                    AddResumeSection(column, "Key Achievement", keyAchievement);
                 });
             });
         }).GeneratePdf(filePath);
+    }
+
+    private string GetAnswerForQuestion(string questionText)
+    {
+        var answer = questionFields.FirstOrDefault(q =>
+            string.Equals(q.Question, questionText, StringComparison.OrdinalIgnoreCase)).AnswerBox?.Text;
+
+        return GetDisplayValue(answer);
+    }
+
+    private static string GetDisplayValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "N/A" : value.Trim();
+    }
+
+    private static void AddResumeSection(ColumnDescriptor column, string heading, string content)
+    {
+        column.Item().Column(section =>
+        {
+            section.Spacing(6);
+            section.Item().Text(heading).FontSize(14).Bold();
+            section.Item().Text(content);
+        });
     }
 
     private void LoadResume()
